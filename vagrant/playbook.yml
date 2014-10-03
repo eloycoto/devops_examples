@@ -1,0 +1,40 @@
+---
+- hosts: all
+  sudo: true
+  tasks:
+    - name: Install dependencies
+      apt: name={{item}} force=yes
+      with_items:
+        - python-pycurl
+        - supervisor
+        - python-setuptools
+        - git
+
+    - git: repo=https://github.com/eloycoto/flask_hello_world.git
+           dest=/opt/hello/
+      register: git_result
+      notify: supervisor
+
+    - debug: var=git_result
+
+    - name: Install required pip
+      easy_install: name=pip
+
+    - name: Install virtualenv
+      pip: name=virtualenv
+
+    - name: start virtualenv
+      shell: virtualenv /opt/hello/env/
+      ignore_errors: true
+
+    - name: Install pip dependendencies
+      pip: requirements=/opt/hello/req.txt virtualenv=/opt/hello/env/
+
+    - name: Set supervisor
+      template: src=supervisor.t2 dest=/etc/supervisor/conf.d/hello.conf
+      notify: supervisor
+
+  handlers:
+    - name: supervisor
+      service: name=supervisor state=restarted
+      ignore_errors: true
